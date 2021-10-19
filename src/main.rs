@@ -35,8 +35,11 @@ fn handle_connection(mut stream: TcpStream) {
 }
 
 fn handle_connection2(mut stream: TcpStream) {
-    read_request(&stream);
-    let contents = create_contents("b.html");
+    let buffer = read_request(&stream);
+    let mut contents = create_contents("b.html");
+    if buffer.starts_with(b"GET /xss") {
+        contents = get_first_line(&buffer);
+    }
     let response = format!("HTTP/1.1 200 OK\r\n\r\n{}", contents);
     stream.write(response.as_bytes()).unwrap();
     stream.flush().unwrap();
@@ -49,8 +52,20 @@ fn create_contents(file: &str) -> String {
     contents
 }
 
-fn read_request(mut stream: &TcpStream) {
+fn read_request(mut stream: &TcpStream) -> [u8; 1024] {
     let mut buffer = [0; 1024];
     stream.read(&mut buffer).unwrap();
     println!("{}", String::from_utf8_lossy(&buffer));
+    buffer
+}
+
+fn get_first_line(buffer: &[u8; 1024]) -> String {
+    let mut contents = String::from("");
+    for (i, &b) in buffer.iter().enumerate() {
+        if b == b'\r' {
+            contents = buffer[0..i].iter().map(|&s| s as char).collect();
+            break
+        }
+    }
+    contents
 }
