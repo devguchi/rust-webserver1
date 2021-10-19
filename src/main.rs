@@ -14,24 +14,14 @@ fn main() {
 fn handle_connection(mut stream: TcpStream) {
     let mut buffer = [0; 1024];
     stream.read(&mut buffer).unwrap();
-    println!("{}", String::from_utf8_lossy(&buffer[..]));
+    let request = String::from_utf8_lossy(&buffer);
+    println!("{}", request);
 
-    let get = b"GET / HTTP/1.1\r\n";
     let mut contents = String::new();
-    let mut status_code = 200;
-    let mut status_msg = "OK";
-    if buffer.starts_with(get) {
-        let mut file = File::open("a.html").unwrap();
-        file.read_to_string(&mut contents).unwrap();
-    } else {
-        status_code = 400;
-        status_msg = "NOT FOUND";
-        contents = String::from("NOT FOUND");
-    }
-    let response = format!(
-        "HTTP/1.1 {} {}\r\n\r\n{}",
-        status_code, status_msg, contents
-    );
+    let mut file = File::open("a.html").unwrap();
+    file.read_to_string(&mut contents).unwrap();
+    let header = "Set-Cookie: SESID=12345; path=/";
+    let response = format!("HTTP/1.1 200 OK\r\n{}\r\n\r\n{}", header, contents);
     stream.write(response.as_bytes()).unwrap();
     stream.flush().unwrap();
 }
